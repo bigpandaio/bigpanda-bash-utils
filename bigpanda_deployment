@@ -1,0 +1,181 @@
+#!/bin/bash
+
+
+function start {
+    if [ -z "$BIGPANDA_TOKEN" ]; then
+        echo "$0: Please set \$BIGPANDA_TOKEN." >&2
+        exit 1
+    fi
+
+    cat >$TMPFILE <<EOF
+{ "component": "$1",
+  "version": "$2",
+EOF
+    [ -n "$4" ] && echo \"source\": \"$4\", >> $TMPFILE
+    [ -n "$5" ] && echo \"env\": \"$5\", >> $TMPFILE
+
+    cat >>$TMPFILE <<EOF
+  "hosts": [ $3 ]
+}
+EOF
+    api_call "$BASE_URL/data/events/deployments/start" >/dev/null
+}
+
+function success {
+    if [ -z "$BIGPANDA_TOKEN" ]; then
+        echo "$0: Please set \$BIGPANDA_TOKEN." >&2
+        exit 1
+    fi
+
+    cat >$TMPFILE <<EOF
+{ "component": "$1",
+"version": "$2",
+"hosts": [ $3 ],
+"status": "success"
+}
+EOF
+    api_call "$BASE_URL/data/events/deployments/end" >/dev/null
+	#rm $TMPFILE
+}
+
+function fail {
+    if [ -z "$BIGPANDA_TOKEN" ]; then
+        echo "$0: Please set \$BIGPANDA_TOKEN." >&2
+        exit 1
+    fi
+
+    cat >$TMPFILE <<EOF
+{ "component": "$1",
+  "version": "$2",
+  "hosts": [ $3 ],
+EOF
+    [ -n "$4" ] && echo \"errorMessage\": \"$4\", >> $TMPFILE
+    cat >>$TMPFILE <<EOF
+  "status": "failure"
+}
+EOF
+    api_call "$BASE_URL/data/events/deployments/end" >/dev/null
+	#rm $TMPFILE
+}
+
+function help {
+    case "$1" in
+        start)
+            echo "Usage: success [-e ENV] [-s SOURCE] COMPONENT VERSION HOST [HOST [...]]"
+            echo
+            echo "COMPONENT     Application being deployed"
+            echo "VERSION       Version of application being deployed"
+            echo "HOST          List of hostnames that are included in the deployment"
+            echo "ENV           Optional environment name"
+            echo "SOURCE        Optional name of system triggering the deployment"
+            ;;
+        success)
+            echo "Usage: success COMPONENT VERSION HOST [HOST [...]]"
+            echo
+            echo "COMPONENT     Application being deployed"
+            echo "VERSION       Version of application being deployed"
+            echo "HOST          List of hostnames the deployment succeeded on"
+            ;;
+        fail)
+            echo "Usage: fail [-m MESSAGE] COMPONENT VERSION HOST [HOST [...]]"
+            echo
+            echo "COMPONENT     Application being deployed"
+            echo "VERSION       Version of application being deployed"
+            echo "HOST          List of hostnames the deployment failed on"
+            echo "MESSAGE       Optional error message"
+            ;;
+        *)
+            echo "Usage: help COMMAND";
+            echo
+            echo "COMMAND can be start, success or fail"
+            ;;
+    esac
+}
+
+function usage {
+    echo "Usage: $0 help|start|success|fail ARGS"
+}
+
+function parse_args {
+    while [ -n "$1" ]; do
+        case "$1" in
+            -h|--help)
+                help $command
+                exit
+                ;;
+            -e)
+                shift
+                if [ -z "$1" ]; then
+                    echo "$0: missing environment for -e"
+                    exit 1
+                fi
+                ENV=$1
+                ;;
+            -s)
+                shift
+                if [ -z "$1" ]; then
+                    echo "$0: missing source for -s"
+                    exit 1
+                fi
+                SOURCE=$1
+                ;;
+            -m)
+                shift
+                if [ -z "$1" ]; then
+                    echo "$0: missing message for -m"
+                    exit 1
+                fi
+                MESSAGE=$1
+                ;;
+            -*)
+                echo "$0: Illegal option: $1"
+                exit 1
+                ;;
+            *)
+                if [ -z "$COMPONENT" ]; then
+                    COMPONENT=$1
+                elif [ -z "$VERSION" ]; then
+                    VERSION=$1
+                elif [ -z "$HOSTS" ]; then
+                    HOSTS="\"$1\""
+                else
+                    HOSTS="$HOSTS,\"$1\""
+                fi
+        esac
+        shift
+    done
+
+    if [ -z "$COMPONENT" -o -z "$VERSION" -o -z "$HOSTS" ]; then
+        echo "$0: missing component, version or host" >&2
+        exit 1
+    fi
+}
+
+function api_call {
+    curl -# -f -i -X POST -H "Authorization: Bearer $BIGPANDA_TOKEN" -H "Content-Type: application/json" -d "@$TMPFILE" "$@"
+}
+
+TMPFILE=/tmp/bigpanda_deployment
+BASE_URL="https://api.bigpanda.io"
+COMPONENT=
+VERSION=
+HOSTS=
+ENV=
+SOURCE=
+MESSAGE=
+
+command=$1
+shift
+
+parse_args "$@"
+
+case "$command" in
+    start) start "$COMPONENT" "$VERSION" "$HOSTS" "$SOURCE" "$ENV" ;;
+    success) success "$COMPONENT" "$VERSION" "$HOSTS" ;;
+    fail) fail "$COMPONENT" "$VERSION" "$HOSTS" "$MESSAGE" ;;
+    help) help "$@" >&2 ;;
+    *)
+        usage >&2
+        exit 1
+    ;;
+esac
