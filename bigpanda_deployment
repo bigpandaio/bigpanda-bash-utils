@@ -84,6 +84,17 @@ function help {
             echo "HOST          List of hostnames the deployment failed on"
             echo "MESSAGE       Optional error message"
             ;;
+        '')
+            echo "$0: Send deployment info to BigPanda"
+            echo
+            echo "List of commands:"
+            echo "start         Notify a deployment has started"
+            echo "success       Notify a deployment has succeeded"
+            echo "fail          Notify a deployment has failed"
+            echo "help          Get help about commands."
+            echo
+            echo "Run '$0 help COMMAND' for info about that command"
+            ;;
         *)
             echo "Usage: help COMMAND";
             echo
@@ -93,7 +104,9 @@ function help {
 }
 
 function usage {
-    echo "Usage: $0 help|start|success|fail ARGS"
+    echo "Usage: $0 COMMAND arguments"
+    echo
+    echo "Run '$0 help' for more info"
 }
 
 function parse_args {
@@ -167,13 +180,19 @@ MESSAGE=
 command=$1
 shift
 
-parse_args "$@"
 
 case "$command" in
-    start) start "$COMPONENT" "$VERSION" "$HOSTS" "$SOURCE" "$ENV" ;;
-    success) success "$COMPONENT" "$VERSION" "$HOSTS" ;;
-    fail) fail "$COMPONENT" "$VERSION" "$HOSTS" "$MESSAGE" ;;
-    help) help "$@" >&2 ;;
+    start)
+        parse_args "$@"
+        start "$COMPONENT" "$VERSION" "$HOSTS" "$SOURCE" "$ENV" ;;
+    success)
+        parse_args "$@"
+        success "$COMPONENT" "$VERSION" "$HOSTS" ;;
+    fail)
+        parse_args "$@"
+        fail "$COMPONENT" "$VERSION" "$HOSTS" "$MESSAGE" ;;
+    help)
+        help "$@" >&2 ;;
     *)
         usage >&2
         exit 1
