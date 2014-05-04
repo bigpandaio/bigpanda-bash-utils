@@ -61,25 +61,25 @@ EOF
 function help {
     case "$1" in
         start)
-            echo "Usage: success [-e ENV] [-s SOURCE] COMPONENT VERSION HOST [HOST [...]]"
+            echo "Usage: success [-e ENV] [-s SOURCE] APP_NAME VERSION HOST [HOST [...]]"
             echo
-            echo "COMPONENT     Application being deployed"
+            echo "APP_NAME      Application being deployed"
             echo "VERSION       Version of application being deployed"
             echo "HOST          List of hostnames that are included in the deployment"
             echo "ENV           Optional environment name"
             echo "SOURCE        Optional name of system triggering the deployment"
             ;;
         success)
-            echo "Usage: success COMPONENT VERSION HOST [HOST [...]]"
+            echo "Usage: success APP_NAME VERSION HOST [HOST [...]]"
             echo
-            echo "COMPONENT     Application being deployed"
+            echo "APP_NAME      Application being deployed"
             echo "VERSION       Version of application being deployed"
             echo "HOST          List of hostnames the deployment succeeded on"
             ;;
         fail)
-            echo "Usage: fail [-m MESSAGE] COMPONENT VERSION HOST [HOST [...]]"
+            echo "Usage: fail [-m MESSAGE] APP_NAME VERSION HOST [HOST [...]]"
             echo
-            echo "COMPONENT     Application being deployed"
+            echo "APP_NAME      Application being deployed"
             echo "VERSION       Version of application being deployed"
             echo "HOST          List of hostnames the deployment failed on"
             echo "MESSAGE       Optional error message"
@@ -145,8 +145,8 @@ function parse_args {
                 exit 1
                 ;;
             *)
-                if [ -z "$COMPONENT" ]; then
-                    COMPONENT=$1
+                if [ -z "$APP_NAME" ]; then
+                    APP_NAME=$1
                 elif [ -z "$VERSION" ]; then
                     VERSION=$1
                 elif [ -z "$HOSTS" ]; then
@@ -158,7 +158,7 @@ function parse_args {
         shift
     done
 
-    if [ -z "$COMPONENT" -o -z "$VERSION" -o -z "$HOSTS" ]; then
+    if [ -z "$APP_NAME" -o -z "$VERSION" -o -z "$HOSTS" ]; then
         echo "$0: missing component, version or host" >&2
         exit 1
     fi
@@ -170,7 +170,7 @@ function api_call {
 
 TMPFILE=/tmp/bigpanda_deployment
 BASE_URL="https://api.bigpanda.io"
-COMPONENT=
+APP_NAME=
 VERSION=
 HOSTS=
 ENV=
@@ -184,13 +184,13 @@ shift
 case "$command" in
     start)
         parse_args "$@"
-        start "$COMPONENT" "$VERSION" "$HOSTS" "$SOURCE" "$ENV" ;;
+        start "$APP_NAME" "$VERSION" "$HOSTS" "$SOURCE" "$ENV" ;;
     success)
         parse_args "$@"
-        success "$COMPONENT" "$VERSION" "$HOSTS" ;;
+        success "$APP_NAME" "$VERSION" "$HOSTS" ;;
     fail)
         parse_args "$@"
-        fail "$COMPONENT" "$VERSION" "$HOSTS" "$MESSAGE" ;;
+        fail "$APP_NAME" "$VERSION" "$HOSTS" "$MESSAGE" ;;
     help)
         help "$@" >&2 ;;
     *)
