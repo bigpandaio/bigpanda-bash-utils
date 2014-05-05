@@ -2,8 +2,8 @@
 
 
 function start {
-    if [ -z "$BIGPANDA_TOKEN" ]; then
-        echo "$0: Please set \$BIGPANDA_TOKEN." >&2
+    if [ -z "$BP_API_TOKEN" ]; then
+        echo "$0: Please set \$BP_API_TOKEN." >&2
         exit 1
     fi
 
@@ -22,8 +22,8 @@ EOF
 }
 
 function success {
-    if [ -z "$BIGPANDA_TOKEN" ]; then
-        echo "$0: Please set \$BIGPANDA_TOKEN." >&2
+    if [ -z "$BP_API_TOKEN" ]; then
+        echo "$0: Please set \$BP_API_TOKEN." >&2
         exit 1
     fi
 
@@ -39,8 +39,8 @@ EOF
 }
 
 function fail {
-    if [ -z "$BIGPANDA_TOKEN" ]; then
-        echo "$0: Please set \$BIGPANDA_TOKEN." >&2
+    if [ -z "$BP_API_TOKEN" ]; then
+        echo "$0: Please set \$BP_API_TOKEN." >&2
         exit 1
     fi
 
@@ -165,7 +165,7 @@ function parse_args {
 }
 
 function api_call {
-    curl -# -f -i -X POST -H "Authorization: Bearer $BIGPANDA_TOKEN" -H "Content-Type: application/json" -d "@$TMPFILE" "$@"
+    curl -# -f -i -X POST -H "Authorization: Bearer $BP_API_TOKEN" -H "Content-Type: application/json" -d "@$TMPFILE" "$@"
 }
 
 TMPFILE=/tmp/bigpanda_deployment
