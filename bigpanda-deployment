@@ -64,7 +64,7 @@ EOF
 function help {
     case "$1" in
         start)
-            echo "Usage: success [-e ENV] [-d DESCRIPTION] [-o OWNER] APP_NAME VERSION HOST [HOST [...]]"
+            echo "Usage: start [-e ENV] [-d DESCRIPTION] [-o OWNER] APP_NAME VERSION HOST [HOST [...]]"
             echo
             echo "APP_NAME      Application being deployed"
             echo "VERSION       Version of application being deployed"
