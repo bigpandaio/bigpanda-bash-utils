@@ -177,7 +177,7 @@ function parse_args {
 }
 
 function api_call {
-    echo curl -# -f -i -X POST -H "Authorization: Bearer $BP_API_TOKEN" -H "Content-Type: application/json" -d "@$TMPFILE" "$@"
+    curl -# -f -i -X POST -H "Authorization: Bearer $BP_API_TOKEN" -H "Content-Type: application/json" -d "@$TMPFILE" "$@"
 }
 
 TMPFILE=/tmp/bigpanda_deployment
