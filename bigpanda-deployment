@@ -1,6 +1,5 @@
 #!/bin/bash
 
-
 function start {
     if [ -z "$BP_API_TOKEN" ]; then
         echo "$0: Please set \$BP_API_TOKEN." >&2
@@ -8,17 +7,21 @@ function start {
     fi
 
     cat >$TMPFILE <<EOF
-{ "component": "$1",
+{ 
+  "component": "$1",
   "version": "$2",
   "source_system": "bash",
 EOF
-    [ -n "$4" ] && echo \"env\": \"$5\", >> $TMPFILE
+    [ -n "$4" ] && echo "  \"env\": \"$4\"," >> $TMPFILE
+    [ -n "$5" ] && echo "  \"description\": \"$5\"," >> $TMPFILE
+    [ -n "$6" ] && echo "  \"owner\": \"$6\"," >> $TMPFILE
 
     cat >>$TMPFILE <<EOF
   "hosts": [ $3 ]
 }
 EOF
     api_call "$BASE_URL/data/events/deployments/start" >/dev/null
+	rm $TMPFILE
 }
 
 function success {
@@ -35,7 +38,7 @@ function success {
 }
 EOF
     api_call "$BASE_URL/data/events/deployments/end" >/dev/null
-	#rm $TMPFILE
+	rm $TMPFILE
 }
 
 function fail {
@@ -55,18 +58,20 @@ EOF
 }
 EOF
     api_call "$BASE_URL/data/events/deployments/end" >/dev/null
-	#rm $TMPFILE
+	rm $TMPFILE
 }
 
 function help {
     case "$1" in
         start)
-            echo "Usage: success [-e ENV] APP_NAME VERSION HOST [HOST [...]]"
+            echo "Usage: success [-e ENV] [-d DESCRIPTION] [-o OWNER] APP_NAME VERSION HOST [HOST [...]]"
             echo
             echo "APP_NAME      Application being deployed"
             echo "VERSION       Version of application being deployed"
             echo "HOST          List of hostnames that are included in the deployment"
             echo "ENV           Optional environment name"
+            echo "DESCRIPTION   Optional deployment description"
+            echo "OWNER         Optional deployment owner"
             ;;
         success)
             echo "Usage: success APP_NAME VERSION HOST [HOST [...]]"
@@ -123,6 +128,22 @@ function parse_args {
                 fi
                 ENV=$1
                 ;;
+            -d)
+                shift
+                if [ -z "$1" ]; then
+                    echo "$0: missing description for -d"
+                    exit 1
+                fi
+                DESCRIPTION=$1
+                ;;
+            -o)
+                shift
+                if [ -z "$1" ]; then
+                    echo "$0: missing owner for -o"
+                    exit 1
+                fi
+                OWNER=$1
+                ;;
             -m)
                 shift
                 if [ -z "$1" ]; then
@@ -156,7 +177,7 @@ function parse_args {
 }
 
 function api_call {
-    curl -# -f -i -X POST -H "Authorization: Bearer $BP_API_TOKEN" -H "Content-Type: application/json" -d "@$TMPFILE" "$@"
+    echo curl -# -f -i -X POST -H "Authorization: Bearer $BP_API_TOKEN" -H "Content-Type: application/json" -d "@$TMPFILE" "$@"
 }
 
 TMPFILE=/tmp/bigpanda_deployment
@@ -166,6 +187,8 @@ VERSION=
 HOSTS=
 ENV=
 MESSAGE=
+OWNER=
+DESCRIPTION=
 
 command=$1
 shift
@@ -174,7 +197,7 @@ shift
 case "$command" in
     start)
         parse_args "$@"
-        start "$APP_NAME" "$VERSION" "$HOSTS" "$ENV" ;;
+        start "$APP_NAME" "$VERSION" "$HOSTS" "$ENV" "$DESCRIPTION" "$OWNER";;
     success)
         parse_args "$@"
         success "$APP_NAME" "$VERSION" "$HOSTS" ;;
