@@ -1,5 +1,9 @@
 #!/bin/bash
 
+function verbose {
+    [ "$VERBOSE" -gt 0 ]
+}
+
 function help {
     usage
     echo
@@ -36,10 +40,6 @@ function get_status {
     esac
 
     echo $ret
-}
-
-function verbose {
-    [ "$VERBOSE" -gt 0 ]
 }
 
 function sanitize {
@@ -179,7 +179,7 @@ EOF
     done >>$TMPFILE
 
     cat >>$TMPFILE <<EOF
-  "timestamp": $TIMESTAMP"
+  "timestamp": $TIMESTAMP
 }
 EOF
 }
@@ -206,7 +206,7 @@ function api_call {
 }
 
 TMPFILE=/tmp/bigpanda_incident
-BASE_URL="https://api.bigpanda.io"
+BASE_URL="https://stg-api.bigpanda.io"
 API_ENDPOINT="data/v2/alerts"
 VERBOSE=0
 PRIMARY_KEY=host
@@ -240,7 +240,11 @@ generate_tmpfile
 if verbose; then
     echo "Sending this playload:"
     cat $TMPFILE
+    echo
 fi
+
+verbose && echo "POSTing to $BASE_URL/$API_ENDPOINT"
+api_call "$BASE_URL/$API_ENDPOINT"
 
 verbose && echo "Removing temp file $TMPFILE"
 rm $TMPFILE
