@@ -1,7 +1,29 @@
 #!/bin/bash
 
 function help {
-    echo "Usage: $0 [-v] [ALERT_ATTRS] STATUS SUBJECT [SUBJECT [...]]"
+    usage
+    echo
+    echo "Arguments:"
+    echo -e "STATUS\t\tStatus of the alert. One of: ok, warn, crit, ack"
+    echo -e "SUBJECT\t\tName of hostname, application, service, etc"
+    echo -e "CHECK\t\tOptional specific check about SUBJECT"
+    echo
+    echo "Optional Parameters:"
+    echo -e "-d,--description DESC\t\tAdd text description about the alert"
+    echo -e "-c,--cluster CLUSTER\t\tName of cluster/logical group SUBJECT is a member of"
+    echo -e "-t,--time TIME\t\t\tOverride timestamp of alert, in unix time (default: now)"
+    echo -e "-e,--extra-var ATTR=VALUE\tAdd a custom attribute to the alert. Can be repeated."
+    echo -e "-p,--primary ATTR\t\tOverride primary attribute name (default: host)"
+    echo -e "-s,--secondary ATTR\t\tOverride secondary attribute name (default: check)"
+    echo -e "-v,--verbose\t\t\tPrint more info while running"
+    echo -e "-h,--help\t\t\tPrint this help screen and exit"
+    echo
+    echo "Examples:"
+    echo "Send a warning about a host being down:"
+    echo "  $0 crit prod-server-1 alive_check -d 'Ping failed'"
+    echo
+    echo "Acknowledge a problem and add more info:"
+    echo " $0 ack prod-server-1 alive_check -e wiki_link=http://wiki.acme.com/1234"
 }
 
 function get_status {
@@ -16,10 +38,13 @@ function get_status {
     echo $ret
 }
 
+function sanitize {
+    echo $1 | tr '"' _
+}
+
 function usage {
-    echo "Usage: $0 COMMAND arguments"
-    echo
-    echo "Run '$0 help' for more info"
+    echo "Usage: $0 [-v] [ALERT_INFO] STATUS SUBJECT [CHECK]"
+    echo "Send alert to BigPanda"
 }
 
 function parse_args {
@@ -35,7 +60,7 @@ function parse_args {
                     echo "$0: missing primary attribute name"
                     exit 1
                 fi
-                PRIMARY_KEY=$1
+                PRIMARY_KEY=`sanitize "$1"`
                 ;;
             -s|--secondary)
                 shift
@@ -43,7 +68,7 @@ function parse_args {
                     echo "$0: missing secondary attribute name"
                     exit 1
                 fi
-                SECONDARY_KEY=$1
+                SECONDARY_KEY=`sanitize "$1"`
                 ;;
             -d|--description)
                 shift
@@ -51,7 +76,7 @@ function parse_args {
                     echo "$0: missing description for -d"
                     exit 1
                 fi
-                DESCRIPTION=$1
+                DESCRIPTION=`sanitize "$1"`
                 ;;
             -c|--cluster)
                 shift
@@ -59,7 +84,7 @@ function parse_args {
                     echo "$0: missing cluster for -C"
                     exit 1
                 fi
-                CLUSTER=$1
+                CLUSTER=`sanitize "$1"`
                 ;;
             -t|--time)
                 shift
@@ -74,12 +99,13 @@ function parse_args {
                 if [ -z "$1" ] || ! [[ "$1" =~ = ]]; then
                     echo "$0: missing attribute and value"
                 fi
-                EXTRA_ATTRS+=($1)
+                EXTRA_ATTRS+=(`sanitize "$1"`)
                 ;;
-            -v) VERBOSE=1 ;;
+            -v|--verbose) VERBOSE=1 ;;
             -*)
                 echo "$0: Illegal option: $1"
                 usage
+                echo "Run $0 --help for more info"
                 exit 1
                 ;;
             *)
@@ -90,9 +116,9 @@ function parse_args {
                         exit 1
                     fi
                 elif [ -z "$PRIMARY_VALUE" ]; then
-                    PRIMARY_VALUE=$1
+                    PRIMARY_VALUE=`sanitize "$1"`
                 elif [ -z "$SECONDARY_VALUE" ]; then
-                    SECONDARY_VALUE=$1
+                    SECONDARY_VALUE=`sanitize "$1"`
                 else
                     echo "$0: Too many arguments." >&2
                     exit 1
@@ -100,13 +126,31 @@ function parse_args {
         esac
         shift
     done
-
-    if [ -z "$APP_NAME" -o -z "$VERSION" -o -z "$HOSTS" ]; then
-        echo "$0: missing component, version or host" >&2
-        exit 1
-    fi
 }
 
+function verify_args {
+    if [ -z "$PRIMARY_VALUE" ]; then
+        echo "$0: Missing subject for alert"
+        return 1
+    fi
+
+    if [ -z "$PRIMARY_KEY" ]; then
+        echo "$0: Invalid primary key"
+        return 1
+    fi
+
+    if [ -z "$SECONDARY_KEY" ]; then
+        echo "$0: Invalid secondary key"
+        return 1
+    fi
+
+    if [[ "$TIMESTAMP" =~ [^0-9] ]]; then
+        echo "$0: Invalid timestamp"
+        return 1
+    fi
+
+
+}
 function api_call {
     curl -# -f -i -X POST -H "Authorization: Bearer $BP_API_TOKEN" -H "Content-Type: application/json" -d "@$TMPFILE" "$@"
 }
@@ -122,8 +166,11 @@ STATUS=
 TIMESTAMP=
 DESCRIPTION=
 CLUSTER=
+EXTRA_ATTRS=()
 
 parse_args "$@"
+
+verify_args >&2 || exit 1
 
 if [ -z "$BP_API_TOKEN" -o -z "$BP_APP_KEY" ]; then
     echo "$0: Please set \$BP_API_TOKEN and \$BP_APP_KEY." >&2
