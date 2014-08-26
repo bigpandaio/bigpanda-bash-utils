@@ -38,8 +38,12 @@ function get_status {
     echo $ret
 }
 
+function verbose {
+    [ "$VERBOSE" -gt 0 ]
+}
+
 function sanitize {
-    echo $1 | tr '"' _
+    echo "$1" | tr '"' _
 }
 
 function usage {
@@ -129,6 +133,11 @@ function parse_args {
 }
 
 function verify_args {
+    if [ -z "$STATUS" ]; then
+        echo "$0: Missing status for alert"
+        return 1
+    fi
+
     if [ -z "$PRIMARY_VALUE" ]; then
         echo "$0: Missing subject for alert"
         return 1
@@ -148,31 +157,90 @@ function verify_args {
         echo "$0: Invalid timestamp"
         return 1
     fi
-
-
 }
+
+function generate_tmpfile {
+    cat >$TMPFILE <<EOF
+{
+  "app_key": "$BP_APP_KEY",
+  "status": "$STATUS",
+  "$PRIMARY_KEY": "$PRIMARY_VALUE",
+  "$SECONDARY_KEY": "$SECONDARY_VALUE",
+  "primary_property": "$PRIMARY_KEY",
+  "secondary_property": "$SECONDARY_KEY",
+EOF
+
+    [ -n "$DESCRIPTION" ] && echo "  \"description\": \"$DESCRIPTION\"," >>$TMPFILE
+    [ -n "$CLUSTER" ] && echo "  \"cluster\": \"$CLUSTER\"," >>$TMPFILE
+    for e in "${EXTRA_ATTRS[@]}"; do
+        key=${e%%=*}
+        value=${e#*=}
+        echo "  \"$key\": \"$value\","
+    done >>$TMPFILE
+
+    cat >>$TMPFILE <<EOF
+  "timestamp": $TIMESTAMP"
+}
+EOF
+}
+
+function print_args {
+    echo Running with args:
+    cat <<EOF
+    STATUS=$STATUS
+    PRIMARY_KEY=$PRIMARY_KEY
+    SECONDARY_KEY=$SECONDARY_KEY
+    PRIMARY_VALUE=$PRIMARY_VALUE
+    SECONDARY_VALUE=$SECONDARY_VALUE
+    TIMESTAMP=$TIMESTAMP
+    DESCRIPTION=$DESCRIPTION
+    CLUSTER=$CLUSTER
+    EXTRA_ATTRS=${EXTRA_ATTRS[@]}
+    BP_API_TOKEN=$BP_API_TOKEN
+    BP_APP_KEY=$BP_APP_KEY
+EOF
+}
+
 function api_call {
     curl -# -f -i -X POST -H "Authorization: Bearer $BP_API_TOKEN" -H "Content-Type: application/json" -d "@$TMPFILE" "$@"
 }
 
 TMPFILE=/tmp/bigpanda_incident
 BASE_URL="https://api.bigpanda.io"
+API_ENDPOINT="data/v2/alerts"
 VERBOSE=0
 PRIMARY_KEY=host
 SECONDARY_KEY=check
 PRIMARY_VALUE=
 SECONDARY_VALUE=
 STATUS=
-TIMESTAMP=
+TIMESTAMP=`date +%s`
 DESCRIPTION=
 CLUSTER=
 EXTRA_ATTRS=()
 
 parse_args "$@"
 
-verify_args >&2 || exit 1
+if ! verify_args; then
+    usage
+    exit 1
+fi >&2
 
 if [ -z "$BP_API_TOKEN" -o -z "$BP_APP_KEY" ]; then
     echo "$0: Please set \$BP_API_TOKEN and \$BP_APP_KEY." >&2
     exit 1
 fi
+
+verbose && print_args
+
+verbose && echo Using temp file $TMPFILE
+
+generate_tmpfile
+
+if verbose; then
+    echo "Sending this playload:"
+    cat $TMPFILE
+fi
+
+verbose && echo "Removing temp file $TMPFILE"
+rm $TMPFILE
