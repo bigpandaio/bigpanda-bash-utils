@@ -1,69 +1,19 @@
 #!/bin/bash
 
-function start {
-
-    cat >$TMPFILE <<EOF
-{ 
-  "component": "$1",
-  "version": "$2",
-  "source_system": "bash",
-EOF
-    [ -n "$4" ] && echo "  \"env\": \"$4\"," >> $TMPFILE
-    [ -n "$5" ] && echo "  \"description\": \"$5\"," >> $TMPFILE
-    [ -n "$6" ] && echo "  \"owner\": \"$6\"," >> $TMPFILE
-
-    cat >>$TMPFILE <<EOF
-  "hosts": [ $3 ]
-}
-EOF
-    api_call "$BASE_URL/data/events/deployments/start" >/dev/null
-	rm $TMPFILE
-}
-
 function help {
+    echo "Usage: $0 [-v] [ALERT_ATTRS] STATUS SUBJECT [SUBJECT [...]]"
+}
+
+function get_status {
     case "$1" in
-        start)
-            echo "Usage: start [-d DESCRIPTION] [-o OWNER] APP_NAME VERSION HOST [HOST [...]]"
-            echo
-            echo "APP_NAME      Application being deployed"
-            echo "VERSION       Version of application being deployed"
-            echo "HOST          List of hostnames that are included in the deployment"
-            echo "ENV           Optional environment name"
-            echo "DESCRIPTION   Optional deployment description"
-            echo "OWNER         Optional deployment owner"
-            ;;
-        success)
-            echo "Usage: success APP_NAME VERSION HOST [HOST [...]]"
-            echo
-            echo "APP_NAME      Application being deployed"
-            echo "VERSION       Version of application being deployed"
-            echo "HOST          List of hostnames the deployment succeeded on"
-            ;;
-        fail)
-            echo "Usage: fail [-m MESSAGE] APP_NAME VERSION HOST [HOST [...]]"
-            echo
-            echo "APP_NAME      Application being deployed"
-            echo "VERSION       Version of application being deployed"
-            echo "HOST          List of hostnames the deployment failed on"
-            echo "MESSAGE       Optional error message"
-            ;;
-        '')
-            echo "$0: Send deployment info to BigPanda"
-            echo
-            echo "List of commands:"
-            echo "start         Notify a deployment has started"
-            echo "success       Notify a deployment has succeeded"
-            echo "fail          Notify a deployment has failed"
-            echo "help          Get help about commands."
-            echo
-            echo "Run '$0 help COMMAND' for info about that command"
-            ;;
-        *)
-            echo "Usage: help COMMAND";
-            echo
-            echo "COMMAND can be start, success or fail"
-            ;;
+        ok) ret=ok ;;
+        warn) ret=warning ;;
+        crit) ret=critical ;;
+        ack) ret=acknowledged ;;
+        *) ret=
     esac
+
+    echo $ret
 }
 
 function usage {
@@ -79,15 +29,23 @@ function parse_args {
                 help $command
                 exit
                 ;;
-            -e)
+            -p|--primary)
                 shift
                 if [ -z "$1" ]; then
-                    echo "$0: missing environment for -e"
+                    echo "$0: missing primary attribute name"
                     exit 1
                 fi
-                ENV=$1
+                PRIMARY_KEY=$1
                 ;;
-            -d)
+            -s|--secondary)
+                shift
+                if [ -z "$1" ]; then
+                    echo "$0: missing secondary attribute name"
+                    exit 1
+                fi
+                SECONDARY_KEY=$1
+                ;;
+            -d|--description)
                 shift
                 if [ -z "$1" ]; then
                     echo "$0: missing description for -d"
@@ -95,36 +53,49 @@ function parse_args {
                 fi
                 DESCRIPTION=$1
                 ;;
-            -o)
+            -c|--cluster)
                 shift
                 if [ -z "$1" ]; then
-                    echo "$0: missing owner for -o"
+                    echo "$0: missing cluster for -C"
                     exit 1
                 fi
-                OWNER=$1
+                CLUSTER=$1
                 ;;
-            -m)
+            -t|--time)
                 shift
                 if [ -z "$1" ]; then
-                    echo "$0: missing message for -m"
+                    echo "$0: missing timestamp for -t"
                     exit 1
                 fi
-                MESSAGE=$1
+                TIMESTAMP=$1
                 ;;
+            -e|--extra-attr)
+                shift
+                if [ -z "$1" ] || ! [[ "$1" =~ = ]]; then
+                    echo "$0: missing attribute and value"
+                fi
+                EXTRA_ATTRS+=($1)
+                ;;
+            -v) VERBOSE=1 ;;
             -*)
                 echo "$0: Illegal option: $1"
                 usage
                 exit 1
                 ;;
             *)
-                if [ -z "$APP_NAME" ]; then
-                    APP_NAME=$1
-                elif [ -z "$VERSION" ]; then
-                    VERSION=$1
-                elif [ -z "$HOSTS" ]; then
-                    HOSTS="\"$1\""
+                if [ -z "$STATUS" ]; then
+                    STATUS=`get_status "$1"`
+                    if [ -z "$STATUS" ]; then
+                        echo "$0: Invalid status $1">&2
+                        exit 1
+                    fi
+                elif [ -z "$PRIMARY_VALUE" ]; then
+                    PRIMARY_VALUE=$1
+                elif [ -z "$SECONDARY_VALUE" ]; then
+                    SECONDARY_VALUE=$1
                 else
-                    HOSTS="$HOSTS,\"$1\""
+                    echo "$0: Too many arguments." >&2
+                    exit 1
                 fi
         esac
         shift
@@ -142,29 +113,17 @@ function api_call {
 
 TMPFILE=/tmp/bigpanda_incident
 BASE_URL="https://api.bigpanda.io"
+VERBOSE=0
+PRIMARY_KEY=host
+SECONDARY_KEY=check
+PRIMARY_VALUE=
+SECONDARY_VALUE=
 STATUS=
-HOST=
 TIMESTAMP=
-CHECK=
 DESCRIPTION=
 CLUSTER=
 
 parse_args "$@"
-
-case "$command" in
-    start)
-        command+=("$APP_NAME", "$VERSION", "$HOSTS", "$ENV", "$DESCRIPTION", "$OWNER") ;;
-    success)
-        command+=("$APP_NAME", "$VERSION", "$HOSTS") ;;
-    fail)
-        command+=("$APP_NAME", "$VERSION", "$HOSTS", "$MESSAGE") ;;
-    help)
-        help "$@" >&2 ;;
-    *)
-        usage >&2
-        exit 1
-    ;;
-esac
 
 if [ -z "$BP_API_TOKEN" -o -z "$BP_APP_KEY" ]; then
     echo "$0: Please set \$BP_API_TOKEN and \$BP_APP_KEY." >&2
