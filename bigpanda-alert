@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 function verbose {
     [ "$VERBOSE" -gt 0 ]
@@ -198,21 +199,32 @@ function print_args {
     EXTRA_ATTRS=${EXTRA_ATTRS[@]}
     BP_API_TOKEN=$BP_API_TOKEN
     BP_APP_KEY=$BP_APP_KEY
+    BP_BASE_URL=$BASE_URL
 EOF
 }
 
 function api_call {
     CURL=(curl -s -i -X POST -H "Authorization: Bearer $BP_API_TOKEN" -H "Content-Type: application/json" -d "@$TMPFILE" "$@")
-    if verbose; then
-       "${CURL[@]}"
-       echo
+    output=`"${CURL[@]}"`
+    first_line=`echo "$output" | head -1`
+
+    if [[ "$first_line" =~ ^HTTP/...\ 20. ]]; then
+        ret=0
     else
-       "${CURL[@]}" | head -1
-   fi
+        ret=2
+    fi
+
+    if verbose; then
+       echo "$output"
+    else
+        echo "$first_line"
+    fi
+
+    return $ret
 }
 
-TMPFILE=/tmp/bigpanda_incident
-BASE_URL="https://stg-api.bigpanda.io"
+TMPFILE=/tmp/bigpanda_alert
+BASE_URL=${BP_BASE_URL:-https://stg-api.bigpanda.io}
 API_ENDPOINT="data/v2/alerts"
 VERBOSE=0
 PRIMARY_KEY=host
