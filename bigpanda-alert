@@ -224,7 +224,7 @@ function api_call {
 }
 
 TMPFILE=/tmp/bigpanda_alert
-BASE_URL=${BP_BASE_URL:-https://stg-api.bigpanda.io}
+BASE_URL=${BP_BASE_URL:-https://api.bigpanda.io}
 API_ENDPOINT="data/v2/alerts"
 VERBOSE=0
 PRIMARY_KEY=host
