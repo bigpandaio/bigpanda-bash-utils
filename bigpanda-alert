@@ -185,7 +185,7 @@ EOF
 }
 
 function print_args {
-    echo Running with args:
+    echo \* Running with args:
     cat <<EOF
     STATUS=$STATUS
     PRIMARY_KEY=$PRIMARY_KEY
@@ -202,7 +202,13 @@ EOF
 }
 
 function api_call {
-    curl -# -f -i -X POST -H "Authorization: Bearer $BP_API_TOKEN" -H "Content-Type: application/json" -d "@$TMPFILE" "$@"
+    CURL=(curl -s -i -X POST -H "Authorization: Bearer $BP_API_TOKEN" -H "Content-Type: application/json" -d "@$TMPFILE" "$@")
+    if verbose; then
+       "${CURL[@]}"
+       echo
+    else
+       "${CURL[@]}" | head -1
+   fi
 }
 
 TMPFILE=/tmp/bigpanda_incident
@@ -231,20 +237,25 @@ if [ -z "$BP_API_TOKEN" -o -z "$BP_APP_KEY" ]; then
     exit 1
 fi
 
+if ! which curl >/dev/null; then
+    echo "$0: Please install curl." >&2
+    exit 1
+fi
+
 verbose && print_args
 
-verbose && echo Using temp file $TMPFILE
+verbose && echo \* Using temp file $TMPFILE
 
 generate_tmpfile
 
 if verbose; then
-    echo "Sending this playload:"
+    echo "* Sending this playload:"
     cat $TMPFILE
     echo
 fi
 
-verbose && echo "POSTing to $BASE_URL/$API_ENDPOINT"
+verbose && echo "* POSTing to $BASE_URL/$API_ENDPOINT"
 api_call "$BASE_URL/$API_ENDPOINT"
 
-verbose && echo "Removing temp file $TMPFILE"
+verbose && echo "* Removing temp file $TMPFILE"
 rm $TMPFILE
