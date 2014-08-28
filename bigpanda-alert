@@ -24,7 +24,7 @@ function help {
     echo -e "-h,--help\t\t\tPrint this help screen and exit"
     echo
     echo "Examples:"
-    echo "Send a warning about a host being down:"
+    echo "Send an alert about a host being down:"
     echo "  $0 crit prod-server-1 alive_check -d 'Ping failed'"
     echo
     echo "Acknowledge a problem and add more info:"
@@ -65,7 +65,7 @@ function parse_args {
                     echo "$0: missing primary attribute name"
                     exit 1
                 fi
-                PRIMARY_KEY=`sanitize "$1"`
+                PRIMARY_ATTR=`sanitize "$1"`
                 ;;
             -s|--secondary)
                 shift
@@ -73,7 +73,7 @@ function parse_args {
                     echo "$0: missing secondary attribute name"
                     exit 1
                 fi
-                SECONDARY_KEY=`sanitize "$1"`
+                SECONDARY_ATTR=`sanitize "$1"`
                 ;;
             -d|--description)
                 shift
@@ -144,12 +144,12 @@ function verify_args {
         return 1
     fi
 
-    if [ -z "$PRIMARY_KEY" ]; then
+    if [ -z "$PRIMARY_ATTR" ]; then
         echo "$0: Invalid primary key"
         return 1
     fi
 
-    if [ -z "$SECONDARY_KEY" ]; then
+    if [ -z "$SECONDARY_ATTR" ]; then
         echo "$0: Invalid secondary key"
         return 1
     fi
@@ -165,10 +165,10 @@ function generate_tmpfile {
 {
   "app_key": "$BP_APP_KEY",
   "status": "$STATUS",
-  "$PRIMARY_KEY": "$PRIMARY_VALUE",
-  "$SECONDARY_KEY": "$SECONDARY_VALUE",
-  "primary_property": "$PRIMARY_KEY",
-  "secondary_property": "$SECONDARY_KEY",
+  "$PRIMARY_ATTR": "$PRIMARY_VALUE",
+  "$SECONDARY_ATTR": "$SECONDARY_VALUE",
+  "primary_property": "$PRIMARY_ATTR",
+  "secondary_property": "$SECONDARY_ATTR",
 EOF
 
     [ -n "$DESCRIPTION" ] && echo "  \"description\": \"$DESCRIPTION\"," >>$TMPFILE
@@ -189,8 +189,8 @@ function print_args {
     echo \* Running with args:
     cat <<EOF
     STATUS=$STATUS
-    PRIMARY_KEY=$PRIMARY_KEY
-    SECONDARY_KEY=$SECONDARY_KEY
+    PRIMARY_ATTR=$PRIMARY_ATTR
+    SECONDARY_ATTR=$SECONDARY_ATTR
     PRIMARY_VALUE=$PRIMARY_VALUE
     SECONDARY_VALUE=$SECONDARY_VALUE
     TIMESTAMP=$TIMESTAMP
@@ -227,8 +227,8 @@ TMPFILE=/tmp/bigpanda_alert
 BASE_URL=${BP_BASE_URL:-https://api.bigpanda.io}
 API_ENDPOINT="data/v2/alerts"
 VERBOSE=0
-PRIMARY_KEY=host
-SECONDARY_KEY=check
+PRIMARY_ATTR=host
+SECONDARY_ATTR=check
 PRIMARY_VALUE=
 SECONDARY_VALUE=
 STATUS=
