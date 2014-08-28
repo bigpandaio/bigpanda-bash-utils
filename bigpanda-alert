@@ -166,10 +166,15 @@ function generate_tmpfile {
   "app_key": "$BP_APP_KEY",
   "status": "$STATUS",
   "$PRIMARY_ATTR": "$PRIMARY_VALUE",
-  "$SECONDARY_ATTR": "$SECONDARY_VALUE",
   "primary_property": "$PRIMARY_ATTR",
+EOF
+
+    if [ -n "$SECONDARY_VALUE" ]; then
+        cat >>$TMPFILE <<EOF
+  "$SECONDARY_ATTR": "$SECONDARY_VALUE",
   "secondary_property": "$SECONDARY_ATTR",
 EOF
+    fi
 
     [ -n "$DESCRIPTION" ] && echo "  \"description\": \"$DESCRIPTION\"," >>$TMPFILE
     [ -n "$CLUSTER" ] && echo "  \"cluster\": \"$CLUSTER\"," >>$TMPFILE
