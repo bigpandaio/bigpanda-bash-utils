@@ -22,6 +22,7 @@ function help {
     echo -e "-s,--secondary ATTR\t\tOverride secondary attribute name (default: check)"
     echo -e "-v,--verbose\t\t\tPrint more info while running"
     echo -e "-h,--help\t\t\tPrint this help screen and exit"
+    echo -e "--version\t\t\tPrint utility version and exit"
     echo
     echo "Examples:"
     echo "Send an alert about a host being down:"
@@ -49,7 +50,7 @@ function sanitize {
 
 function usage {
     echo "Usage: $0 [-v] [ALERT_INFO] STATUS SUBJECT [CHECK]"
-    echo "Send alert to BigPanda"
+    echo "Send alert to BigPanda."
 }
 
 function parse_args {
@@ -57,6 +58,10 @@ function parse_args {
         case "$1" in
             -h|--help)
                 help $command
+                exit
+                ;;
+            --version)
+                echo "Version: $_VERSION"
                 exit
                 ;;
             -p|--primary)
@@ -228,6 +233,7 @@ function api_call {
     return $ret
 }
 
+_VERSION=1.0
 TMPFILE=/tmp/bigpanda_alert
 BASE_URL=${BP_BASE_URL:-https://api.bigpanda.io}
 API_ENDPOINT="data/v2/alerts"

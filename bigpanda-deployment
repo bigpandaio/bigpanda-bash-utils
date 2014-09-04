@@ -96,6 +96,7 @@ function help {
             echo "success       Notify a deployment has succeeded"
             echo "fail          Notify a deployment has failed"
             echo "help          Get help about commands."
+            echo "version       Show utility version and exit"
             echo
             echo "Run '$0 help COMMAND' for info about that command"
             ;;
@@ -180,6 +181,7 @@ function api_call {
     curl -# -f -i -X POST -H "Authorization: Bearer $BP_API_TOKEN" -H "Content-Type: application/json" -d "@$TMPFILE" "$@"
 }
 
+_VERSION=1.0
 TMPFILE=/tmp/bigpanda_deployment
 BASE_URL="https://api.bigpanda.io"
 APP_NAME=
@@ -206,6 +208,9 @@ case "$command" in
         fail "$APP_NAME" "$VERSION" "$HOSTS" "$MESSAGE" ;;
     help)
         help "$@" >&2 ;;
+    version|--version)
+        echo "Version: $_VERSION"
+        ;;
     *)
         usage >&2
         exit 1
