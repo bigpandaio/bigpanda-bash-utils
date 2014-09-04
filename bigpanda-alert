@@ -211,7 +211,7 @@ EOF
 function api_call {
     CURL=(curl -s -i -X POST -H "Authorization: Bearer $BP_API_TOKEN" -H "Content-Type: application/json" -d "@$TMPFILE" "$@")
     output=`"${CURL[@]}"`
-    first_line=`echo "$output" | head -1`
+    first_line=`echo "$output" 2>&1 | head -1`
 
     if [[ "$first_line" =~ ^HTTP/...\ 20. ]]; then
         ret=0
