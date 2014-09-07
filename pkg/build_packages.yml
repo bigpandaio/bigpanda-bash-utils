@@ -1,0 +1,50 @@
+#!/usr/local/bin/ansible-playbook -ia,
+---
+- hosts: localhost
+  gather_facts: no
+  vars:
+      - pkg_name: bigpanda-utils
+      - unpackaged_files:
+          - pkg
+          - README
+      - packaged_files: "{{ files.stdout_lines | difference(unpackaged_files) | join(' ') }}"
+      - args:
+          rpm: -t rpm --rpm-os linux
+          deb: -t deb
+          base: -s dir --description "`cat ../README`" --name {{pkg_name}} --url http://bigpanda.io  --prefix /usr/bin --maintainer info@bigpanda.io -d curl -a all -C ..
+      - distros:
+          el5:
+            type: rpm
+          el6:
+            type: rpm
+          el7:
+            type: rpm
+          precise:
+            type: deb
+          quantal:
+            type: deb
+          raring:
+            type: deb
+          saucy:
+            type: deb
+          trusty:
+            type: deb
+          wheezy:
+            type: deb
+  tasks:
+      - name: Get version info
+        shell: git describe | sed -n -f git_format_tag.sed
+        changed_when: false
+        register: branch
+
+      - name: Get files to package
+        command: ls ..
+        register: files
+
+      - name: Build {{pkg_name}}
+        shell: fpm --version {{branch.stdout_lines.0}} --iteration {{branch.stdout_lines.1 | default(1) }}.{{item.key}} {{args.base}} {{args[item.value.type]}} {{packaged_files}}
+        failed_when: "':level=>:error' in fpm.stdout or fpm.stderr"
+        changed_when: fpm.rc == 0
+        when: distro is not defined or item.key == distro 
+        with_dict: distros
+        register: fpm

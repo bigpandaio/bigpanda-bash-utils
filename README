@@ -1,0 +1,8 @@
+BigPanda shell utilities.
+
+Use these shell utilities to send alerts and deployments info to BigPanda.
+
+Example:
+    > bigpanda-deployment start myapp 1.0.0 prod-host-1
+
+    > bigpanda-alert crit prod-host-1 "Ping check"
