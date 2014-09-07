@@ -7,11 +7,12 @@
       - unpackaged_files:
           - pkg
           - README
+          - LICENSE
       - packaged_files: "{{ files.stdout_lines | difference(unpackaged_files) | join(' ') }}"
       - args:
           rpm: -t rpm --rpm-os linux
           deb: -t deb
-          base: -s dir --description "`cat ../README`" --name {{pkg_name}} --url http://bigpanda.io  --prefix /usr/bin --maintainer info@bigpanda.io -d curl -a all -C ..
+          base: -s dir --description "`cat ../README`" --name {{pkg_name}} --url http://bigpanda.io  --prefix /usr/bin --maintainer info@bigpanda.io -d curl -a all -C .. --license Apache
       - distros:
           el5:
             type: rpm
