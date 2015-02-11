@@ -181,8 +181,8 @@ function api_call {
     curl -# -f -i -X POST -H "Authorization: Bearer $BP_API_TOKEN" -H "Content-Type: application/json" -d "@$TMPFILE" "$@"
 }
 
-_VERSION=1.0
-TMPFILE=/tmp/bigpanda_deployment
+_VERSION=1.1
+TMPFILE=`mktemp /tmp/bigpanda_deployment.XXXX`
 BASE_URL="https://api.bigpanda.io"
 APP_NAME=
 VERSION=
