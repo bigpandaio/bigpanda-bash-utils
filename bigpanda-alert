@@ -234,7 +234,7 @@ function api_call {
 }
 
 _VERSION=1.0
-TMPFILE=/tmp/bigpanda_alert
+TMPFILE=`mktemp /tmp/bigpanda_alert.XXXX`
 BASE_URL=${BP_BASE_URL:-https://api.bigpanda.io}
 API_ENDPOINT="data/v2/alerts"
 VERBOSE=0
