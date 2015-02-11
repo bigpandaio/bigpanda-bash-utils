@@ -182,7 +182,7 @@ function api_call {
 }
 
 _VERSION=1.1
-TMPFILE=/tmp/bigpanda_deployment
+TMPFILE=`mktemp /tmp/bigpanda_deployment.XXXX`
 BASE_URL="https://api.bigpanda.io"
 APP_NAME=
 VERSION=
